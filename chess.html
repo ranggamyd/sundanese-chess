@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cacaturan</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .game-title {
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .game-status {
+            font-size: 1.2rem;
+            color: #333;
+            margin-bottom: 10px;
+            min-height: 30px;
+        }
+
+        .turn-indicator {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .player-indicator {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .player-indicator.active {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .player-indicator.inactive {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .board-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .board-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .coordinates {
+            position: absolute;
+            font-weight: bold;
+            color: #333;
+            font-size: 14px;
+            user-select: none;
+        }
+
+        .coord-files {
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            width: 100%;
+            justify-content: space-around;
+            padding: 0 2px;
+        }
+
+        .coord-ranks {
+            left: -25px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .chessboard {
+            display: grid;
+            grid-template-columns: repeat(8, 60px);
+            grid-template-rows: repeat(8, 60px);
+            border: 4px solid #333;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .square {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .square.white {
+            background-color: #f0d9b5;
+        }
+
+        .square.black {
+            background-color: #b58863;
+        }
+
+        .square.selected {
+            background-color: #7fc97f !important;
+            box-shadow: inset 0 0 0 3px #4a90e2;
+        }
+
+        .square.valid-move {
+            background-color: #90ee90 !important;
+        }
+
+        .square.valid-move::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: rgba(0, 128, 0, 0.7);
+            border-radius: 50%;
+        }
+
+        .square.in-check {
+            background-color: #ff6b6b !important;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .square:hover {
+            transform: scale(1.05);
+        }
+
+        .piece {
+            user-select: none;
+            transition: transform 0.2s ease;
+            text-shadow: 
+                2px 2px 0px rgba(0,0,0,0.8),
+                -1px -1px 0px rgba(255,255,255,0.3),
+                1px 1px 2px rgba(0,0,0,0.5);
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.4));
+        }
+
+        .piece:hover {
+            transform: scale(1.1);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #ffecd2, #fcb69f);
+            color: #333;
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .move-history {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .move-history h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .move-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .move-item {
+            background: white;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        @media (max-width: 600px) {
+            .chessboard {
+                grid-template-columns: repeat(8, 45px);
+                grid-template-rows: repeat(8, 45px);
+            }
+            
+            .square {
+                width: 45px;
+                height: 45px;
+                font-size: 1.5rem;
+            }
+            
+            .game-title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1 class="game-title">⚔️ CACATURAN ⚔️</h1>
+            <div class="game-status" id="gameStatus">Buru lah jalan</div>
+            <div class="turn-indicator">
+                <div class="player-indicator active" id="whitePlayer">♔ Bodas</div>
+                <div class="player-indicator inactive" id="blackPlayer">♚ Magrib</div>
+            </div>
+        </div>
+
+        <div class="board-container">
+            <div class="board-wrapper">
+                <div class="coordinates coord-files">
+                    <span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span>
+                </div>
+                <div class="coordinates coord-ranks">
+                    <span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+                </div>
+                <div class="chessboard" id="chessboard"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <!-- <button class="btn btn-primary" onclick="newGame()">Game Anyar</button> -->
+            <button class="btn btn-secondary" onclick="undoMove()">Mbitan</button>
+            <button class="btn btn-danger" onclick="resetGame()">Miti deui</button>
+        </div>
+
+        <div class="move-history">
+            <h3>Wani Curang dikadek</h3>
+            <div class="move-list" id="moveList"></div>
+        </div>
+    </div>
+
+    <script>
+        class ChessGame {
+            constructor() {
+                this.board = this.initializeBoard();
+                this.currentPlayer = 'white';
+                this.selectedSquare = null;
+                this.gameOver = false;
+                this.moveHistory = [];
+                this.boardHistory = [];
+                this.kingPositions = { white: [7, 4], black: [0, 4] };
+                this.initializeUI();
+                this.renderBoard();
+            }
+
+            initializeBoard() {
+                const board = Array(8).fill(null).map(() => Array(8).fill(null));
+                
+                // Bidak Magrib
+                board[0] = ['♜', '♞', '♝', '♛', '♚', '♝', '♞', '♜'];
+                board[1] = Array(8).fill('♟');
+                
+                // Bidak Bodas
+                board[6] = Array(8).fill('♙');
+                board[7] = ['♖', '♘', '♗', '♕', '♔', '♗', '♘', '♖'];
+                
+                return board;
+            }
+
+            initializeUI() {
+                const chessboard = document.getElementById('chessboard');
+                chessboard.innerHTML = '';
+                
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const square = document.createElement('div');
+                        square.className = `square ${(row + col) % 2 === 0 ? 'white' : 'black'}`;
+                        square.dataset.row = row;
+                        square.dataset.col = col;
+                        square.addEventListener('click', (e) => this.handleSquareClick(row, col));
+                        chessboard.appendChild(square);
+                    }
+                }
+            }
+
+            renderBoard() {
+                const squares = document.querySelectorAll('.square');
+                squares.forEach((square, index) => {
+                    const row = Math.floor(index / 8);
+                    const col = index % 8;
+                    const piece = this.board[row][col];
+                    square.textContent = piece || '';
+                    
+                    // Reset classes
+                    square.className = `square ${(row + col) % 2 === 0 ? 'white' : 'black'}`;
+                    
+                    // Highlight selected square
+                    if (this.selectedSquare && this.selectedSquare[0] === row && this.selectedSquare[1] === col) {
+                        square.classList.add('selected');
+                    }
+                });
+
+                // Show valid moves
+                if (this.selectedSquare) {
+                    const validMoves = this.getValidMoves(this.selectedSquare[0], this.selectedSquare[1]);
+                    validMoves.forEach(([row, col]) => {
+                        const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                        square.classList.add('valid-move');
+                    });
+                }
+
+                // Highlight king in check
+                if (this.isInCheck(this.currentPlayer)) {
+                    const kingPos = this.kingPositions[this.currentPlayer];
+                    const kingSquare = document.querySelector(`[data-row="${kingPos[0]}"][data-col="${kingPos[1]}"]`);
+                    kingSquare.classList.add('in-check');
+                }
+
+                this.updateGameStatus();
+            }
+
+            handleSquareClick(row, col) {
+                if (this.gameOver) return;
+
+                const piece = this.board[row][col];
+                
+                if (this.selectedSquare) {
+                    const [selectedRow, selectedCol] = this.selectedSquare;
+                    
+                    if (selectedRow === row && selectedCol === col) {
+                        // Deselect
+                        this.selectedSquare = null;
+                    } else if (this.isValidMove(selectedRow, selectedCol, row, col)) {
+                        // Make move
+                        this.makeMove(selectedRow, selectedCol, row, col);
+                        this.selectedSquare = null;
+                    } else if (piece && this.isPieceOwnedByCurrentPlayer(piece)) {
+                        // Select new piece
+                        this.selectedSquare = [row, col];
+                    } else {
+                        this.selectedSquare = null;
+                    }
+                } else if (piece && this.isPieceOwnedByCurrentPlayer(piece)) {
+                    // Select piece
+                    this.selectedSquare = [row, col];
+                }
+                
+                this.renderBoard();
+            }
+
+            isPieceOwnedByCurrentPlayer(piece) {
+                const whitePieces = ['♔', '♕', '♖', '♗', '♘', '♙'];
+                const blackPieces = ['♚', '♛', '♜', '♝', '♞', '♟'];
+                
+                if (this.currentPlayer === 'white') {
+                    return whitePieces.includes(piece);
+                } else {
+                    return blackPieces.includes(piece);
+                }
+            }
+
+            getValidMoves(row, col) {
+                const piece = this.board[row][col];
+                if (!piece) return [];
+
+                let moves = [];
+                const pieceType = this.getPieceType(piece);
+                
+                switch (pieceType) {
+                    case 'pawn':
+                        moves = this.getPawnMoves(row, col);
+                        break;
+                    case 'rook':
+                        moves = this.getRookMoves(row, col);
+                        break;
+                    case 'knight':
+                        moves = this.getKnightMoves(row, col);
+                        break;
+                    case 'bishop':
+                        moves = this.getBishopMoves(row, col);
+                        break;
+                    case 'queen':
+                        moves = this.getQueenMoves(row, col);
+                        break;
+                    case 'king':
+                        moves = this.getKingMoves(row, col);
+                        break;
+                }
+
+                // Filter moves that would put own king in check
+                return moves.filter(([toRow, toCol]) => {
+                    return !this.wouldMoveResultInCheck(row, col, toRow, toCol);
+                });
+            }
+
+            getPieceType(piece) {
+                const pieceTypes = {
+                    '♔': 'king', '♚': 'king',
+                    '♕': 'queen', '♛': 'queen',
+                    '♖': 'rook', '♜': 'rook',
+                    '♗': 'bishop', '♝': 'bishop',
+                    '♘': 'knight', '♞': 'knight',
+                    '♙': 'pawn', '♟': 'pawn'
+                };
+                return pieceTypes[piece];
+            }
+
+            getPawnMoves(row, col) {
+                const moves = [];
+                const piece = this.board[row][col];
+                const isWhite = ['♔', '♕', '♖', '♗', '♘', '♙'].includes(piece);
+                const direction = isWhite ? -1 : 1;
+                const startRow = isWhite ? 6 : 1;
+
+                // Move forward
+                if (this.isValidPosition(row + direction, col) && !this.board[row + direction][col]) {
+                    moves.push([row + direction, col]);
+                    
+                    // Double move from start
+                    if (row === startRow && !this.board[row + 2 * direction][col]) {
+                        moves.push([row + 2 * direction, col]);
+                    }
+                }
+
+                // Capture diagonally
+                [-1, 1].forEach(colOffset => {
+                    const newRow = row + direction;
+                    const newCol = col + colOffset;
+                    if (this.isValidPosition(newRow, newCol)) {
+                        const targetPiece = this.board[newRow][newCol];
+                        if (targetPiece && !this.isPieceOwnedByCurrentPlayer(targetPiece)) {
+                            moves.push([newRow, newCol]);
+                        }
+                    }
+                });
+
+                return moves;
+            }
+
+            getRookMoves(row, col) {
+                const moves = [];
+                const directions = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+                
+                directions.forEach(([rowDir, colDir]) => {
+                    for (let i = 1; i < 8; i++) {
+                        const newRow = row + rowDir * i;
+                        const newCol = col + colDir * i;
+                        
+                        if (!this.isValidPosition(newRow, newCol)) break;
+                        
+                        const targetPiece = this.board[newRow][newCol];
+                        if (!targetPiece) {
+                            moves.push([newRow, newCol]);
+                        } else {
+                            if (!this.isPieceOwnedByCurrentPlayer(targetPiece)) {
+                                moves.push([newRow, newCol]);
+                            }
+                            break;
+                        }
+                    }
+                });
+                
+                return moves;
+            }
+
+            getKnightMoves(row, col) {
+                const moves = [];
+                const knightMoves = [
+                    [-2, -1], [-2, 1], [-1, -2], [-1, 2],
+                    [1, -2], [1, 2], [2, -1], [2, 1]
+                ];
+                
+                knightMoves.forEach(([rowOffset, colOffset]) => {
+                    const newRow = row + rowOffset;
+                    const newCol = col + colOffset;
+                    
+                    if (this.isValidPosition(newRow, newCol)) {
+                        const targetPiece = this.board[newRow][newCol];
+                        if (!targetPiece || !this.isPieceOwnedByCurrentPlayer(targetPiece)) {
+                            moves.push([newRow, newCol]);
+                        }
+                    }
+                });
+                
+                return moves;
+            }
+
+            getBishopMoves(row, col) {
+                const moves = [];
+                const directions = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+                
+                directions.forEach(([rowDir, colDir]) => {
+                    for (let i = 1; i < 8; i++) {
+                        const newRow = row + rowDir * i;
+                        const newCol = col + colDir * i;
+                        
+                        if (!this.isValidPosition(newRow, newCol)) break;
+                        
+                        const targetPiece = this.board[newRow][newCol];
+                        if (!targetPiece) {
+                            moves.push([newRow, newCol]);
+                        } else {
+                            if (!this.isPieceOwnedByCurrentPlayer(targetPiece)) {
+                                moves.push([newRow, newCol]);
+                            }
+                            break;
+                        }
+                    }
+                });
+                
+                return moves;
+            }
+
+            getQueenMoves(row, col) {
+                return [...this.getRookMoves(row, col), ...this.getBishopMoves(row, col)];
+            }
+
+            getKingMoves(row, col) {
+                const moves = [];
+                const directions = [
+                    [-1, -1], [-1, 0], [-1, 1],
+                    [0, -1],           [0, 1],
+                    [1, -1],  [1, 0],  [1, 1]
+                ];
+                
+                directions.forEach(([rowOffset, colOffset]) => {
+                    const newRow = row + rowOffset;
+                    const newCol = col + colOffset;
+                    
+                    if (this.isValidPosition(newRow, newCol)) {
+                        const targetPiece = this.board[newRow][newCol];
+                        if (!targetPiece || !this.isPieceOwnedByCurrentPlayer(targetPiece)) {
+                            moves.push([newRow, newCol]);
+                        }
+                    }
+                });
+                
+                return moves;
+            }
+
+            isValidPosition(row, col) {
+                return row >= 0 && row < 8 && col >= 0 && col < 8;
+            }
+
+            isValidMove(fromRow, fromCol, toRow, toCol) {
+                const validMoves = this.getValidMoves(fromRow, fromCol);
+                return validMoves.some(([row, col]) => row === toRow && col === toCol);
+            }
+
+            makeMove(fromRow, fromCol, toRow, toCol) {
+                // Save board state for undo
+                this.boardHistory.push(JSON.parse(JSON.stringify(this.board)));
+                
+                const piece = this.board[fromRow][fromCol];
+                const capturedPiece = this.board[toRow][toCol];
+                
+                // Record move
+                const moveNotation = this.getMoveNotation(piece, fromRow, fromCol, toRow, toCol, capturedPiece);
+                this.moveHistory.push(moveNotation);
+                
+                // Make the move
+                this.board[toRow][toCol] = piece;
+                this.board[fromRow][fromCol] = null;
+                
+                // Update king position
+                if (this.getPieceType(piece) === 'king') {
+                    this.kingPositions[this.currentPlayer] = [toRow, toCol];
+                }
+                
+                // Check for pawn promotion
+                if (this.getPieceType(piece) === 'pawn') {
+                    if ((piece === '♙' && toRow === 0) || (piece === '♟' && toRow === 7)) {
+                        this.board[toRow][toCol] = piece === '♙' ? '♕' : '♛';
+                    }
+                }
+                
+                // Switch turns
+                this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
+                
+                // Check for game over
+                this.checkGameOver();
+                
+                // Update move list display
+                this.updateMoveList();
+            }
+
+            getMoveNotation(piece, fromRow, fromCol, toRow, toCol, capturedPiece) {
+                const files = 'abcdefgh';
+                const ranks = '87654321';
+                
+                const fromSquare = files[fromCol] + ranks[fromRow];
+                const toSquare = files[toCol] + ranks[toRow];
+                const capture = capturedPiece ? 'x' : '';
+                
+                return `${piece}${fromSquare}${capture}${toSquare}`;
+            }
+
+            wouldMoveResultInCheck(fromRow, fromCol, toRow, toCol) {
+                // Simulate the move
+                const originalPiece = this.board[toRow][toCol];
+                const movingPiece = this.board[fromRow][fromCol];
+                
+                this.board[toRow][toCol] = movingPiece;
+                this.board[fromRow][fromCol] = null;
+                
+                // Update king position if king is moving
+                let originalKingPos = null;
+                if (this.getPieceType(movingPiece) === 'king') {
+                    originalKingPos = [...this.kingPositions[this.currentPlayer]];
+                    this.kingPositions[this.currentPlayer] = [toRow, toCol];
+                }
+                
+                const inCheck = this.isInCheck(this.currentPlayer);
+                
+                // Restore board
+                this.board[fromRow][fromCol] = movingPiece;
+                this.board[toRow][toCol] = originalPiece;
+                
+                // Restore king position
+                if (originalKingPos) {
+                    this.kingPositions[this.currentPlayer] = originalKingPos;
+                }
+                
+                return inCheck;
+            }
+
+            isInCheck(player) {
+                const kingPos = this.kingPositions[player];
+                const opponent = player === 'white' ? 'black' : 'white';
+                
+                // Check if any opponent piece can attack the king
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = this.board[row][col];
+                        if (piece && this.isPieceColor(piece, opponent)) {
+                            const tempPlayer = this.currentPlayer;
+                            this.currentPlayer = opponent;
+                            const moves = this.getBasicMoves(row, col);
+                            this.currentPlayer = tempPlayer;
+                            
+                            if (moves.some(([r, c]) => r === kingPos[0] && c === kingPos[1])) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            isPieceColor(piece, color) {
+                const whitePieces = ['♔', '♕', '♖', '♗', '♘', '♙'];
+                const blackPieces = ['♚', '♛', '♜', '♝', '♞', '♟'];
+                
+                if (color === 'white') {
+                    return whitePieces.includes(piece);
+                } else {
+                    return blackPieces.includes(piece);
+                }
+            }
+
+            getBasicMoves(row, col) {
+                const piece = this.board[row][col];
+                if (!piece) return [];
+
+                const pieceType = this.getPieceType(piece);
+                
+                switch (pieceType) {
+                    case 'pawn':
+                        return this.getPawnMoves(row, col);
+                    case 'rook':
+                        return this.getRookMoves(row, col);
+                    case 'knight':
+                        return this.getKnightMoves(row, col);
+                    case 'bishop':
+                        return this.getBishopMoves(row, col);
+                    case 'queen':
+                        return this.getQueenMoves(row, col);
+                    case 'king':
+                        return this.getKingMoves(row, col);
+                    default:
+                        return [];
+                }
+            }
+
+            checkGameOver() {
+                const hasValidMoves = this.hasValidMoves();
+                const inCheck = this.isInCheck(this.currentPlayer);
+                
+                if (!hasValidMoves) {
+                    if (inCheck) {
+                        this.gameOver = true;
+                        const winner = this.currentPlayer === 'white' ? 'Magrib' : 'Bodas';
+                        document.getElementById('gameStatus').textContent = `Halaahhh, ${winner} nu meunang!`;
+                    } else {
+                        this.gameOver = true;
+                        document.getElementById('gameStatus').textContent = 'Barodok gini maen teh.';
+                    }
+                }
+            }
+
+            hasValidMoves() {
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = this.board[row][col];
+                        if (piece && this.isPieceOwnedByCurrentPlayer(piece)) {
+                            const validMoves = this.getValidMoves(row, col);
+                            if (validMoves.length > 0) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            updateGameStatus() {
+                if (this.gameOver) return;
+                
+                const inCheck = this.isInCheck(this.currentPlayer);
+                const playerName = this.currentPlayer === 'white' ? 'Bodas' : 'Magrib';
+                
+                if (inCheck) {
+                    document.getElementById('gameStatus').textContent = `Mamam! SKAK ${playerName}!`;
+                } else {
+                    document.getElementById('gameStatus').textContent = `Buru lah jalan`;
+                }
+                
+                // Update player indicators
+                const whitePlayer = document.getElementById('whitePlayer');
+                const blackPlayer = document.getElementById('blackPlayer');
+                
+                if (this.currentPlayer === 'white') {
+                    whitePlayer.className = 'player-indicator active';
+                    blackPlayer.className = 'player-indicator inactive';
+                } else {
+                    whitePlayer.className = 'player-indicator inactive';
+                    blackPlayer.className = 'player-indicator active';
+                }
+            }
+
+            updateMoveList() {
+                const moveList = document.getElementById('moveList');
+                moveList.innerHTML = '';
+                
+                this.moveHistory.forEach((move, index) => {
+                    const moveItem = document.createElement('div');
+                    moveItem.className = 'move-item';
+                    moveItem.textContent = `${Math.floor(index/2) + 1}. ${move}`;
+                    moveList.appendChild(moveItem);
+                });
+            }
+
+            undoLastMove() {
+                if (this.boardHistory.length === 0 || this.gameOver) return;
+                
+                // Restore previous board state
+                this.board = this.boardHistory.pop();
+                this.moveHistory.pop();
+                
+                // Switch back to previous player
+                this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
+                
+                // Update king positions
+                this.updateKingPositions();
+                
+                // Clear selection
+                this.selectedSquare = null;
+                
+                // Re-render
+                this.renderBoard();
+                this.updateMoveList();
+            }
+
+            updateKingPositions() {
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = this.board[row][col];
+                        if (piece === '♔') {
+                            this.kingPositions.white = [row, col];
+                        } else if (piece === '♚') {
+                            this.kingPositions.black = [row, col];
+                        }
+                    }
+                }
+            }
+
+            resetGame() {
+                this.board = this.initializeBoard();
+                this.currentPlayer = 'white';
+                this.selectedSquare = null;
+                this.gameOver = false;
+                this.moveHistory = [];
+                this.boardHistory = [];
+                this.kingPositions = { white: [7, 4], black: [0, 4] };
+                this.renderBoard();
+                this.updateMoveList();
+                document.getElementById('gameStatus').textContent = 'Buru lah jalan';
+            }
+        }
+
+        // Initialize game
+        let game = new ChessGame();
+
+        // Control functions
+        function newGame() {
+            game.resetGame();
+        }
+
+        function undoMove() {
+            game.undoLastMove();
+        }
+
+        function resetGame() {
+            if (confirm('cupu dek')) {
+                game.resetGame();
+            }
+        }
+    </script>
+</body>
+</html>
